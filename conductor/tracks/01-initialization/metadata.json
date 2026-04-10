@@ -1,0 +1,8 @@
+{
+  "track_id": "01-initialization",
+  "name": "Project Initialization",
+  "status": "active",
+  "created_at": "2026-04-10T12:00:00Z",
+  "updated_at": "2026-04-10T12:00:00Z",
+  "description": "Setup Next.js, Firebase, and Stripe."
+}
