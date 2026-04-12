@@ -1,51 +1,97 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { getUserData } from "../onboarding/actions";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/Providers";
+import { getAuthToken, signOut } from "@/lib/auth";
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [userData, setUserData] = useState<any>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (session?.userId) {
-      const fetchUserData = async () => {
-        const data = await getUserData();
-        if (data) {
-          setUserData(data);
-        }
-      };
-      fetchUserData();
+    if (!loading && !user) {
+      router.replace("/");
     }
-  }, [session?.userId]);
 
-  if (status === "unauthenticated") {
-    router.push("/");
+    if (!user) {
+      return;
+    }
+
+    const fetchUserData = async () => {
+      const idToken = await getAuthToken();
+
+      if (!idToken) {
+        router.replace("/");
+        return;
+      }
+
+      const response = await fetch("/api/user", {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        router.replace("/");
+        return;
+      }
+
+      const data = await response.json();
+      setUserData(data);
+
+      if (!data.onboarding_complete || !data.isSubscribed) {
+        router.replace("/onboarding");
+      }
+    };
+
+    void fetchUserData();
+  }, [loading, router, user]);
+
+  if (loading || !user) {
     return null;
   }
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isProfileMenuOpen &&
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isProfileMenuOpen]);
+
   const runAgent = async () => {
-    if (!userData || !session) return;
+    if (!userData) return;
     setIsRunning(true);
     setRunResult(null);
 
     try {
+      const idToken = await getAuthToken();
+
+      if (!idToken) {
+        throw new Error("Unauthorized");
+      }
+
       const response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: session.userId,
-          target_niche: userData.target_niche,
-          target_topics: userData.target_topics,
-          linkedin_token: userData.integrations?.linkedin?.access_token,
-          user_urn: userData.integrations?.linkedin?.user_urn,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({}),
       });
 
       const data = await response.json();
@@ -63,17 +109,68 @@ export default function DashboardPage() {
 
   const isSubscribed = userData?.isSubscribed || false;
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.replace("/");
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <nav className="bg-slate-950 border-b border-slate-800/50">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            </div>
+            <span className="font-bold text-xl tracking-tight text-white">LnkdAgent</span>
+          </Link>
+
+          <div className="flex-1" />
+
+          <div ref={profileMenuRef} className="relative">
+            <button
+              onClick={() => setIsProfileMenuOpen((previousState) => !previousState)}
+              className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-slate-200 hover:border-slate-600"
+              aria-expanded={isProfileMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Open profile menu"
+            >
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="h-8 w-8 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-black">
+                  {user.displayName?.charAt(0) || user.email?.charAt(0)}
+                </div>
+              )}
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+
+            {isProfileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-40 rounded-xl border border-slate-700 bg-slate-900 p-1 shadow-2xl" role="menu">
+                <button
+                  onClick={handleSignOut}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-100 hover:bg-slate-800"
+                  role="menuitem"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-4xl mx-auto space-y-8 p-8">
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-black tracking-tight text-slate-900">Dashboard</h1>
-          <div className="flex items-center gap-4 px-4 py-2 bg-white rounded-full shadow-sm border border-slate-200">
-            <span className="text-sm font-bold text-slate-600">{session?.user?.email}</span>
-            <div className="h-8 w-8 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-black">
-              {session?.user?.name?.charAt(0)}
-            </div>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

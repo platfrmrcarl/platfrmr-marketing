@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/Providers";
+import { getAuthToken } from "@/lib/auth";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -53,16 +55,44 @@ function CheckoutForm({ clientSecret }: { clientSecret: string }) {
 }
 
 export default function CheckoutPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [clientSecret, setClientSecret] = useState("");
 
   useEffect(() => {
-    fetch("/api/stripe/create-subscription", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    })
-      .then((res) => res.json())
-      .then((data) => setClientSecret(data.clientSecret));
-  }, []);
+    if (!loading && !user) {
+      router.replace("/login?callbackUrl=/checkout");
+      return;
+    }
+
+    if (!user) {
+      return;
+    }
+
+    const loadSubscription = async () => {
+      const idToken = await getAuthToken();
+
+      if (!idToken) {
+        router.replace("/login?callbackUrl=/checkout");
+        return;
+      }
+
+      const response = await fetch("/api/stripe/create-subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setClientSecret(data.clientSecret);
+      }
+    };
+
+    void loadSubscription();
+  }, [loading, router, user]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-900 text-white">

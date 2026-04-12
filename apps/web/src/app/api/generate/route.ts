@@ -1,12 +1,24 @@
 import { NextResponse } from 'next/server';
 import { getOrchestrator } from '@/agents/orchestrator';
 import { InMemoryRunner, stringifyContent } from '@google/adk';
+import { verifyFirebaseRequest } from '@/lib/server-auth';
+import { dbAdmin } from '@/lib/firebase-admin';
 
 export async function POST(req: Request) {
   try {
-    const { userId, target_niche, target_topics, linkedin_token, user_urn } = await req.json();
+    const decodedToken = await verifyFirebaseRequest(req);
 
-    if (!userId || !target_niche || !target_topics || !linkedin_token) {
+    if (!decodedToken) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userSnap = await dbAdmin.collection('users').doc(decodedToken.uid).get();
+    const userData = userSnap.data();
+
+    if (!userData?.target_niche || !userData?.target_topics || !userData?.integrations?.linkedin?.access_token) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -14,11 +26,11 @@ export async function POST(req: Request) {
     }
 
     const inputData = `
-        User ID: ${userId}
-        Niche: ${target_niche}
-        Topics: ${target_topics}
-        LinkedIn Token: ${linkedin_token}
-        User URN: ${user_urn || 'unknown'}
+        User ID: ${decodedToken.uid}
+        Niche: ${userData.target_niche}
+        Topics: ${userData.target_topics}
+        LinkedIn Token: ${userData.integrations.linkedin.access_token}
+        User URN: ${userData.integrations?.linkedin?.user_urn || 'unknown'}
         `;
 
 
@@ -26,7 +38,7 @@ export async function POST(req: Request) {
     const runner = new InMemoryRunner({ agent: orchestrator });
 
     const resultStream = runner.runEphemeral({
-      userId: userId,
+      userId: decodedToken.uid,
       newMessage: { role: 'user', parts: [{ text: inputData }] },
     });
 

@@ -1,26 +1,58 @@
 "use client";
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { completeOnboarding } from "./actions";
+import { useAuth } from "@/components/Providers";
+import { getAuthToken } from "@/lib/auth";
 
 export default function OnboardingPage() {
-  const { data: session, status, update } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [formData, setFormData] = useState({
     target_niche: "",
     target_topics: "",
+    subscription_plan: "pro_monthly",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (status === "loading") return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/");
+    }
+  }, [authLoading, user, router]);
 
-  if (status === "unauthenticated") {
-    router.push("/");
-    return null;
-  }
+  useEffect(() => {
+    if (authLoading || !user) {
+      return;
+    }
+
+    const redirectIfSubscribed = async () => {
+      const idToken = await getAuthToken();
+      if (!idToken) {
+        return;
+      }
+
+      const response = await fetch("/api/user", {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      if (data.onboarding_complete && data.isSubscribed) {
+        router.replace("/dashboard");
+      }
+    };
+
+    void redirectIfSubscribed();
+  }, [authLoading, router, user]);
+
+  if (authLoading || !user) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -32,10 +64,27 @@ export default function OnboardingPage() {
     setError(null);
     
     try {
-      await completeOnboarding(formData);
-      // Force a session update to reflect onboarding_complete: true in the token
-      await update({ onboarding_complete: true });
-      router.push("/dashboard");
+      const idToken = await getAuthToken();
+
+      if (!idToken) {
+        throw new Error("Unauthorized");
+      }
+
+      const response = await fetch("/api/user", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to complete onboarding.");
+      }
+
+      router.push("/checkout");
     } catch (err: any) {
       console.error("Onboarding error:", err);
       setError(err.message || "Failed to complete onboarding. Please try again.");
@@ -90,12 +139,34 @@ export default function OnboardingPage() {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Subscription Plan
+            </label>
+            <p className="text-xs text-slate-500 mb-2">Choose your plan to continue.</p>
+            <label className="flex items-start gap-3 p-4 border border-slate-300 rounded-lg cursor-pointer hover:border-cyan-500">
+              <input
+                type="radio"
+                name="subscription_plan"
+                value="pro_monthly"
+                checked={formData.subscription_plan === "pro_monthly"}
+                onChange={handleChange}
+                className="mt-1"
+                required
+              />
+              <span className="text-sm text-slate-700">
+                <span className="font-semibold text-slate-900 block">Professional Plan - $20/month</span>
+                Includes full LinkedIn agent automation, scheduled publishing, and manual runs.
+              </span>
+            </label>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50"
           >
-            {loading ? "Saving..." : "Finish Setup"}
+            {loading ? "Saving..." : "Continue to Checkout"}
           </button>
         </form>
       </div>

@@ -1,8 +1,18 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import React from "react";
+import { useAuth } from "@/components/Providers";
+
+type PricingProduct = {
+  id: string;
+  name: string;
+  description: string | null;
+  unitAmount: number;
+  currency: string;
+  interval: string;
+  marketingFeatures: string[];
+};
 
 // --- Icons (Inline SVGs for no extra dependencies) ---
 
@@ -23,7 +33,61 @@ const CheckIcon = () => (
 );
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
+  const [pricingProduct, setPricingProduct] = React.useState<PricingProduct | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+
+    async function loadPricingProduct() {
+      try {
+        const response = await fetch("/api/stripe/products", { cache: "no-store" });
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as PricingProduct;
+        if (isMounted) {
+          setPricingProduct(data);
+        }
+      } catch {
+        // Keep marketing fallback values if Stripe cannot be reached.
+      }
+    }
+
+    loadPricingProduct();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const formattedPrice =
+    pricingProduct && Number.isFinite(pricingProduct.unitAmount)
+      ? new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: pricingProduct.currency.toUpperCase(),
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        }).format(pricingProduct.unitAmount / 100)
+      : "$20";
+
+  const billingInterval = pricingProduct?.interval ?? "month";
+  const pricingDescription =
+    pricingProduct?.description ||
+    "Everything you need to grow your LinkedIn profile on autopilot.";
+  const ctaLabel = pricingProduct?.name
+    ? `Start ${pricingProduct.name}`
+    : "Start Professional Plan";
+  const pricingFeatures =
+    pricingProduct?.marketingFeatures?.length
+      ? pricingProduct.marketingFeatures
+      : [
+          "AI-generated LinkedIn content calendar",
+          "Trend-driven post ideas for your market",
+          "Voice-matched long-form article writing",
+          "Scheduled publishing for consistent reach",
+        ];
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-50 selection:bg-cyan-500/30">
@@ -43,7 +107,7 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-4">
-          {!session ? (
+          {!user ? (
             <Link
               href="/login"
               className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-full text-sm font-semibold transition-all"
@@ -175,35 +239,25 @@ export default function Home() {
               <div className="space-y-6">
                 <h2 className="text-3xl md:text-5xl font-bold tracking-tight">Simple, transparent pricing.</h2>
                 <div className="flex items-center justify-center gap-2">
-                  <span className="text-5xl md:text-7xl font-black">$20</span>
-                  <span className="text-slate-400 font-medium">/ month</span>
+                  <span className="text-5xl md:text-7xl font-black">{formattedPrice}</span>
+                  <span className="text-slate-400 font-medium">/ {billingInterval}</span>
                 </div>
-                <p className="text-slate-400 text-lg">Everything you need to grow your LinkedIn profile on autopilot.</p>
+                <p className="text-slate-400 text-lg">{pricingDescription}</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto py-8">
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <div className="text-cyan-400"><CheckIcon /></div>
-                    <span>Unlimited Niche Topics</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <div className="text-cyan-400"><CheckIcon /></div>
-                    <span>Daily Article Posts</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <div className="text-cyan-400"><CheckIcon /></div>
-                    <span>Brand Voice AI Training</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <div className="text-cyan-400"><CheckIcon /></div>
-                    <span>Direct LinkedIn Integration</span>
-                  </div>
+                  {pricingFeatures.map((feature) => (
+                    <div key={feature} className="flex items-center gap-3 text-slate-300">
+                      <div className="text-cyan-400"><CheckIcon /></div>
+                      <span>{feature}</span>
+                    </div>
+                  ))}
                 </div>
 
                 <Link
                   href="/login?callbackUrl=/checkout"
                   className="w-full md:w-auto px-12 py-5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-2xl shadow-lg shadow-cyan-900/20 transition-all hover:-translate-y-1 inline-block"
                 >
-                  Start Professional Plan
+                  {ctaLabel}
                 </Link>
                 <p className="text-xs text-slate-500 uppercase font-bold tracking-widest pt-4">NO CREDIT CARD REQUIRED TO START</p>
               </div>

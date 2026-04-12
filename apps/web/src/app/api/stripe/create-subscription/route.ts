@@ -1,15 +1,22 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { getServerSession } from 'next-auth';
+import { verifyFirebaseRequest } from '@/lib/server-auth';
+import { dbAdmin } from '@/lib/firebase-admin';
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession();
-    if (!session || !session.user) {
+    const decodedToken = await verifyFirebaseRequest(req);
+
+    if (!decodedToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { email } = session.user;
+    const userSnap = await dbAdmin.collection('users').doc(decodedToken.uid).get();
+    const email = userSnap.data()?.email || decodedToken.email;
+
+    if (!email) {
+      return NextResponse.json({ error: 'Missing user email' }, { status: 400 });
+    }
 
     // 1. Find or create Stripe customer
     const customers = await stripe.customers.list({ email: email!, limit: 1 });
