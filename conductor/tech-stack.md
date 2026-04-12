@@ -20,13 +20,13 @@
   - `preferences`: { `target_niche`, `target_audience`, `target_topics`, `preferred_hashtags` }
   - `integrations`: { `linkedin`: { `access_token`, `user_urn` } }
 
-## 3. ADK Multi-Agent System (Python)
-- **Framework:** `google-adk`
-- **Models:** Gemini 1.5 Pro
+## 3. ADK Multi-Agent System (TypeScript)
+- **Framework:** `@google/adk`
+- **Models:** Gemini 2.5 Pro (Orchestrator, Researcher, Writer), Gemini 3 Flash (ImageGen), Gemini 1.5 Pro (Publisher)
 - **Tools:** `GoogleSearchTool`, custom LinkedIn API tool.
-- **Environment:** Python 3.10+ (managed with a virtual environment).
+- **Environment:** Integrated directly into the Next.js API routes (Serverless).
 
 ## 4. Infrastructure & Integration
 - **Deployment:** Vercel (for Next.js app)
-- **Execution Bridge:** Next.js API route triggers the Python agents via a subprocess or microservice call.
-- **Scheduling:** Next.js Cron or external scheduler to trigger daily agent execution.
+- **Execution:** Next.js API route (`/api/generate`) triggers the agents.
+- **Scheduling:** Next.js Cron (`/api/cron/run-agents`) to trigger daily agent execution.

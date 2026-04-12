@@ -1,4 +1,4 @@
-# Agent Architecture: Google ADK Implementation (`agents/`)
+# Agent Architecture: Google ADK Implementation (`apps/web/src/agents/`)
 
 ## 1. Specialist: Researcher Agent (`agents/src/researcher.py`)
 * **Class:** `LlmAgent` using `gemini-3.1-pro`.
@@ -11,14 +11,14 @@
 
 ## 3. Specialist: Publisher Agent (`agents/src/publisher.py`)
 * **Class:** `LlmAgent` 
-* **Tools:** Custom Python function tool wrapped with `@tool` that makes a POST request to the LinkedIn UGC Post API.
+* **Tools:** Custom TypeScript function tool wrapped with `@tool` that makes a POST request to the LinkedIn Post API.
 * **Instructions:** Construct the JSON payload and publish the finalized text using the provided LinkedIn `access_token`.
 
-## 4. The Orchestrator (`agents/src/orchestrator.py`)
+## 4. The Orchestrator (`apps/web/src/agents/orchestrator.py`)
 * **Class:** `LlmAgent`
 * **Tools:** `[researcher_agent.as_tool(), writer_agent.as_tool(), publisher_agent.as_tool()]`
 * **Workflow:** Manage the state between Research -> Writing -> Publishing.
 
-## 5. Entry Point (`agents/main.py`)
-* Create a lightweight FastAPI server with a single POST endpoint `/run-workflow`.
+## 5. Entry Point (`apps/web/src/ap/api/generate/route.ts`)
+* Create a lightweight API server with a single POST endpoint `/run-workflow`.
 * This endpoint receives payloads from the Next.js app, initializes the Orchestrator, and kicks off the run.

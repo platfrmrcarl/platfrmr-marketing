@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Core Users Collection
+    // Rules below are intended to prevent unauthorized access.
+    // NOTE: This assumes Firebase Auth is bridged with NextAuth if client-side SDKs are used.
+    match /users/{userId} {
+      // Allow user to read their own profile from the client
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // We recommend using Server Actions or API routes (which bypass rules via Admin SDK)
+      // for updates to sensitive flags like isSubscribed or onboarding_complete.
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      match /{allSubcollections=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // 2. Default Lock-down
+    // Secure the database by denying all other requests.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -2,6 +2,9 @@
 
 # dependencies
 /node_modules
+apps/web/node_modules
+apps/web/.pnp
+apps/web/.pnp.js
 /.pnp
 .pnp.js
 
@@ -9,6 +12,7 @@
 /coverage
 
 # next.js
+apps/web/.next/
 /.next/
 /out/
 
@@ -25,12 +29,12 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
-.env
+apps/web/.env*.local
+apps/web/.env
 
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+apps/web/next-env.d.ts
