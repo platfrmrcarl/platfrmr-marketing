@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/Providers";
 import { getAuthToken } from "@/lib/auth";
+
+interface UserData {
+  target_niche?: string;
+  target_topics?: string;
+  onboarding_complete?: boolean;
+  isSubscribed?: boolean;
+}
 
 export default function OnboardingPage() {
   const { user, loading: authLoading } = useAuth();
@@ -11,7 +18,6 @@ export default function OnboardingPage() {
   const [formData, setFormData] = useState({
     target_niche: "",
     target_topics: "",
-    subscription_plan: "pro_monthly",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,38 +33,47 @@ export default function OnboardingPage() {
       return;
     }
 
-    const redirectIfSubscribed = async () => {
+    const loadUserData = async () => {
       const idToken = await getAuthToken();
       if (!idToken) {
         return;
       }
 
-      const response = await fetch("/api/user", {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+      try {
+        const response = await fetch("/api/user", {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
 
-      if (!response.ok) {
-        return;
-      }
+        if (!response.ok) {
+          return;
+        }
 
-      const data = await response.json();
-      if (data.onboarding_complete && data.isSubscribed) {
-        router.replace("/dashboard");
+        const data = (await response.json()) as UserData;
+        
+        // Pre-fill form if data exists
+        if (data.target_niche || data.target_topics) {
+          setFormData({
+            target_niche: data.target_niche || "",
+            target_topics: data.target_topics || "",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load user data:", err);
       }
     };
 
-    void redirectIfSubscribed();
-  }, [authLoading, router, user]);
+    void loadUserData();
+  }, [authLoading, user]);
 
   if (authLoading || !user) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -80,14 +95,15 @@ export default function OnboardingPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as { error?: string };
         throw new Error(data.error || "Failed to complete onboarding.");
       }
 
-      router.push("/checkout");
-    } catch (err: any) {
+      router.push("/subscribe");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       console.error("Onboarding error:", err);
-      setError(err.message || "Failed to complete onboarding. Please try again.");
+      setError(message || "Failed to complete onboarding. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -97,7 +113,7 @@ export default function OnboardingPage() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-50 text-slate-900">
       <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg border border-slate-200">
         <h1 className="text-2xl font-bold mb-2 text-center text-slate-800">Complete Your Profile</h1>
-        <p className="text-slate-500 text-center mb-8">We need a few details to tailor your LinkedIn strategy.</p>
+        <p className="text-slate-500 text-center mb-8">Set up your strategy, then finalize your subscription on the next step.</p>
         
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
@@ -139,35 +155,23 @@ export default function OnboardingPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Subscription Plan
-            </label>
-            <p className="text-xs text-slate-500 mb-2">Choose your plan to continue.</p>
-            <label className="flex items-start gap-3 p-4 border border-slate-300 rounded-lg cursor-pointer hover:border-cyan-500">
-              <input
-                type="radio"
-                name="subscription_plan"
-                value="pro_monthly"
-                checked={formData.subscription_plan === "pro_monthly"}
-                onChange={handleChange}
-                className="mt-1"
-                required
-              />
-              <span className="text-sm text-slate-700">
-                <span className="font-semibold text-slate-900 block">Professional Plan - $20/month</span>
-                Includes full LinkedIn agent automation, scheduled publishing, and manual runs.
-              </span>
-            </label>
+          <div className="space-y-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? "Saving..." : "Save and Continue"}
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="w-full py-2 text-slate-500 text-sm font-medium hover:text-slate-700 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50"
-          >
-            {loading ? "Saving..." : "Continue to Checkout"}
-          </button>
         </form>
       </div>
     </div>

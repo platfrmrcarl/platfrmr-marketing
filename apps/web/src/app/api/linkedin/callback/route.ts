@@ -60,8 +60,16 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${loginUrl}?error=token_exchange`);
     }
 
-    const tokenData = (await tokenRes.json()) as { access_token: string };
+    const tokenData = (await tokenRes.json()) as { 
+      access_token: string; 
+      expires_in: number;
+      refresh_token?: string;
+      refresh_token_expires_in?: number;
+    };
+    
     const accessToken = tokenData.access_token;
+    const expiresIn = tokenData.expires_in; // Usually 5184000 seconds (60 days)
+    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
     if (!accessToken) {
       return NextResponse.redirect(`${loginUrl}?error=no_access_token`);

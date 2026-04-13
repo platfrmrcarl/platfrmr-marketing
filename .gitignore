@@ -38,3 +38,6 @@ apps/web/.env
 # typescript
 *.tsbuildinfo
 apps/web/next-env.d.ts
+
+#security
+/apps/web/src/security/google-credentials.json

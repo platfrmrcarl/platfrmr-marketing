@@ -58,14 +58,12 @@ export async function PATCH(request: Request) {
   const body = (await request.json()) as {
     target_topics?: string;
     target_niche?: string;
-    subscription_plan?: string;
   };
 
   const targetTopics = sanitizeCsv(body.target_topics ?? "");
   const targetNiche = sanitizeCsv(body.target_niche ?? "");
-  const subscriptionPlan = body.subscription_plan === "pro_monthly" ? "pro_monthly" : "";
 
-  if (!targetTopics || !targetNiche || !subscriptionPlan) {
+  if (!targetTopics || !targetNiche) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -74,7 +72,6 @@ export async function PATCH(request: Request) {
     {
       target_topics: targetTopics,
       target_niche: targetNiche,
-      subscription_plan: subscriptionPlan,
       onboarding_complete: true,
       updatedAt: new Date().toISOString(),
     },

@@ -2,18 +2,42 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/Providers";
 import { getAuthToken, signOut } from "@/lib/auth";
 
+interface UserData {
+  isSubscribed?: boolean;
+  onboarding_complete?: boolean;
+  target_niche?: string;
+  target_topics?: string;
+  picture?: string;
+  [key: string]: unknown;
+}
+
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("success") === "true") {
+        setShowSuccess(true);
+        // Clean up the URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -43,20 +67,17 @@ export default function DashboardPage() {
         return;
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as UserData;
       setUserData(data);
 
-      if (!data.onboarding_complete || !data.isSubscribed) {
+      // Only redirect if not just coming from a successful payment
+      if (!showSuccess && (!data.onboarding_complete || !data.isSubscribed)) {
         router.replace("/onboarding");
       }
     };
 
     void fetchUserData();
-  }, [loading, router, user]);
-
-  if (loading || !user) {
-    return null;
-  }
+  }, [loading, router, user, showSuccess]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -72,6 +93,10 @@ export default function DashboardPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileMenuOpen]);
+
+  if (loading || !user) {
+    return null;
+  }
 
   const runAgent = async () => {
     if (!userData) return;
@@ -94,14 +119,28 @@ export default function DashboardPage() {
         body: JSON.stringify({}),
       });
 
-      const data = await response.json();
-      if (data.success) {
-        setRunResult("Article generated and published successfully!");
-      } else {
-        setRunResult("Error: " + data.error);
+      const rawBody = await response.text();
+      let data: { success?: boolean; result?: string; error?: string } | null = null;
+
+      if (rawBody.trim()) {
+        try {
+          data = JSON.parse(rawBody) as { success?: boolean; result?: string; error?: string };
+        } catch {
+          data = null;
+        }
       }
-    } catch (error: any) {
-      setRunResult("Failed to trigger agent: " + error.message);
+
+      if (response.ok && data?.success) {
+        setRunResult(data.result || "Article generated and published successfully!");
+      } else {
+        const errorMessage =
+          data?.error ||
+          (rawBody.trim() ? rawBody : `Request failed with status ${response.status}`);
+        setRunResult("Error: " + errorMessage);
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      setRunResult("Failed to trigger agent: " + message);
     } finally {
       setIsRunning(false);
     }
@@ -117,6 +156,17 @@ export default function DashboardPage() {
       console.error("Sign out failed:", error);
     }
   };
+
+  const reconnectLinkedIn = () => {
+    window.location.href = `/api/linkedin/auth?callbackUrl=/dashboard`;
+  };
+
+  const linkedinProfileImage =
+    (typeof userData?.picture === "string" && userData.picture.trim().length > 0
+      ? userData.picture
+      : null) ||
+    user.photoURL ||
+    null;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -139,10 +189,12 @@ export default function DashboardPage() {
               aria-haspopup="menu"
               aria-label="Open profile menu"
             >
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
+              {linkedinProfileImage ? (
+                <Image
+                  src={linkedinProfileImage}
                   alt="Profile"
+                  width={32}
+                  height={32}
                   className="h-8 w-8 rounded-full object-cover"
                 />
               ) : (
@@ -169,6 +221,20 @@ export default function DashboardPage() {
       </nav>
 
       <div className="max-w-4xl mx-auto space-y-8 p-8">
+        {showSuccess && (
+          <div className="p-6 bg-cyan-50 border border-cyan-100 rounded-[2rem] text-cyan-800 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-cyan-500 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div>
+                    <h3 className="font-black text-lg">Subscription Activated!</h3>
+                    <p className="opacity-80">Welcome to LnkdAgent. Your automated LinkedIn journey starts now.</p>
+                </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-black tracking-tight text-slate-900">Dashboard</h1>
         </div>
@@ -193,12 +259,21 @@ export default function DashboardPage() {
                     ? "Your LinkedIn agents are running daily to keep your profile active and engaged."
                     : "Upgrade to start your automated LinkedIn growth journey today."}
             </p>
-            <Link 
-              href={isSubscribed ? "#" : "/checkout"}
-              className="text-cyan-600 font-bold hover:text-cyan-500 transition-colors flex items-center gap-1"
-            >
-              {isSubscribed ? "Manage Billing" : "View Pricing"} &rarr;
-            </Link>
+            <div className="flex flex-col gap-3">
+              <Link 
+                href={isSubscribed ? "#" : "/checkout"}
+                className="text-cyan-600 font-bold hover:text-cyan-500 transition-colors flex items-center gap-1"
+              >
+                {isSubscribed ? "Manage Billing" : "View Pricing"} &rarr;
+              </Link>
+              <button 
+                onClick={reconnectLinkedIn}
+                className="text-slate-400 text-sm font-bold hover:text-slate-600 transition-colors flex items-center gap-1 w-fit"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                Reconnect LinkedIn
+              </button>
+            </div>
           </div>
 
           <div className="p-8 bg-white rounded-[2rem] shadow-sm border border-slate-200 relative overflow-hidden group">
@@ -252,7 +327,7 @@ export default function DashboardPage() {
             </div>
 
             {runResult && (
-                <div className={`p-6 rounded-2xl font-bold mb-8 animate-in fade-in zoom-in duration-300 ${runResult.startsWith("Error") || runResult.startsWith("Failed") ? "bg-red-50 text-red-600 border border-red-100" : "bg-cyan-50 text-cyan-700 border border-cyan-100"}`}>
+                <div className={`p-6 rounded-2xl font-medium mb-8 animate-in fade-in zoom-in duration-300 whitespace-pre-wrap font-mono text-sm ${runResult.startsWith("Error") || runResult.startsWith("Failed") ? "bg-red-50 text-red-600 border border-red-100" : "bg-cyan-50 text-cyan-700 border border-cyan-100"}`}>
                     {runResult}
                 </div>
             )}
@@ -266,7 +341,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex flex-col">
                             <span className="font-bold text-slate-800">Article Published</span>
-                            <span className="text-sm text-slate-500 italic">"The Future of AI in SaaS Engineering"</span>
+                            <span className="text-sm text-slate-500 italic">&quot;The Future of AI in SaaS Engineering&quot;</span>
                         </div>
                     </div>
                     <span className="text-sm font-bold text-slate-400">Today, 9:30 AM</span>

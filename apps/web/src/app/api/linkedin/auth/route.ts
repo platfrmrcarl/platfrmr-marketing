@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     response_type: "code",
     client_id: process.env.LINKEDIN_CLIENT_ID!,
     redirect_uri: `${url.origin}/api/linkedin/callback`,
-    scope: "openid profile email",
+    scope: "openid profile email w_member_social",
     state,
   });
 
