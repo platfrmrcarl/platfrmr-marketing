@@ -1,25 +1,29 @@
-# Product Definition: LinkedIn Auto-Marketer SaaS
+# Initial Concept
 
-## 1. Vision & Strategy
-The LinkedIn Auto-Marketer SaaS is designed to provide users with a fully automated way to research, write, and publish professional LinkedIn articles targeted at their specific niche and audience.
+read @conductor/blueprint.md and implement it using Next.js, Firebase, and for the agents use @google/adk for typescript
 
-## 2. Target Audience
-Professionals, entrepreneurs, and businesses looking to maintain a consistent presence on LinkedIn without the manual effort of content creation.
+# Product Definition
 
-## 3. Core Features
-- **Authentication:** OAuth integration with Google and LinkedIn.
-- **Onboarding:** User-defined preferences for niche, audience, topics, and hashtags.
-- **Subscription:** Paid subscription model powered by Stripe.
-- **Automated Content Creation:** A multi-agent system that:
-    - Researches trending topics.
-    - Writes professional articles using Gemini 1.5 Pro.
-    - Publishes posts directly to LinkedIn.
-- **Dashboard:** A simple interface to manage preferences and view status.
+## Vision
+To build a SaaS platform that empowers SMBs, solopreneurs, digital agencies, and enterprise teams to automate and scale their LinkedIn marketing through AI-driven content generation and engagement.
 
-## 4. User Journey
-1.  **Landing Page:** Introduction to the service.
-2.  **Authentication:** Login via Google or LinkedIn.
-3.  **Onboarding:** Provide niche and target audience information.
-4.  **Checkout:** Subscribe via Stripe.
-5.  **Automation:** The system automatically begins its daily/periodic research and publishing cycle.
-6.  **Monitoring:** User can check the dashboard for the latest published content and status.
+## Value Proposition
+- **Efficiency & Scale:** Automate repetitive LinkedIn tasks to save time.
+- **AI-Driven Quality:** Use @google/adk agents to generate high-quality, engaging content.
+- **Data-Backed Insights:** Track and optimize performance for maximum reach.
+
+## Core Features
+- **Authentication & User Management:** Secure LinkedIn login with Firebase and Firestore profile synchronization.
+- **Subscription & Billing:** Integrated Stripe custom checkout with recurring billing and automated access control.
+- **LinkedIn Agent Hub:** AI-powered orchestration for content generation, automated posting, and engagement management.
+- **Conditional Workflow:** Logic to enforce authentication and active subscription status across dashboard and checkout paths.
+
+## Target Audience
+- **SMBs & Solopreneurs:** Streamlined tools for personal brand growth.
+- **Digital Agencies:** Tools to manage and scale LinkedIn presence for multiple clients.
+- **Enterprise Teams:** Internal solutions for corporate marketing and employee advocacy.
+
+## AI Agent Capabilities (@google/adk)
+- **Content Generation:** AI-driven post creation tailored to user goals.
+- **Auto-Posting:** Direct integration with LinkedIn API for scheduled publishing.
+- **Engagement Automation:** Automated interaction with relevant LinkedIn content and comments.

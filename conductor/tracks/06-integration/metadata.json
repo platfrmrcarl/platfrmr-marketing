@@ -1,6 +1,0 @@
-{
-  "id": "06-integration",
-  "name": "Full System Integration",
-  "status": "completed",
-  "description": "Native integration into Next.js routes."
-}

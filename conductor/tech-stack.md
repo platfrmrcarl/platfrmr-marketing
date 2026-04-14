@@ -1,32 +1,21 @@
-# Tech Stack: LinkedIn Auto-Marketer SaaS
+# Technology Stack
 
-## 1. Frontend
-- **Framework:** Next.js (App Router, TypeScript)
-- **Styling:** Vanilla CSS (CSS Variables, Flexbox/Grid, CSS Modules)
-- **Components:** React (Hooks)
+## Frontend
+- **Next.js 14+ (App Router):** The core React-based framework for high-performance server-side rendering and intuitive routing.
+- **Tailwind CSS:** A utility-first CSS framework for rapid and consistent styling.
+- **Lucide-react:** A comprehensive library of lightweight icons for a clean UI.
+- **TypeScript:** Ensuring type safety and better developer experience across the frontend.
 
-## 2. Backend
-- **Authentication:** NextAuth.js (Firebase adapter or standard OAuth logic)
-- **Database:** Firebase Firestore
-- **Payments:** Stripe (Checkout, Billing, Webhooks)
-- **Serverless Functions:** Next.js API Routes (Route Handlers)
+## Backend & Database
+- **Firebase Auth:** Secure user authentication with support for LinkedIn OAuth.
+- **Firestore (NoSQL):** Scalable NoSQL database for managing user profiles and marketing data.
+- **Firebase Functions:** Serverless backend logic for Stripe webhooks and agent orchestration.
+- **Firebase Cloud Storage:** Secure storage for any user-uploaded assets or generated reports.
 
-### 2.1. Data Schema (Firestore)
-- **`users/{userId}`:**
-  - `name`: string
-  - `email`: string
-  - `isSubscribed`: boolean
-  - `stripeCustomerId`: string
-  - `preferences`: { `target_niche`, `target_audience`, `target_topics`, `preferred_hashtags` }
-  - `integrations`: { `linkedin`: { `access_token`, `user_urn` } }
+## AI & Integration Layer
+- **@google/adk (TypeScript):** The primary SDK used to build and orchestrate autonomous AI agents for LinkedIn content and engagement.
+- **LinkedIn API Client:** Direct integration with the LinkedIn API for post publishing and profile analysis.
+- **Environment Variables (.env):** Secure management of API keys and project secrets.
 
-## 3. ADK Multi-Agent System (TypeScript)
-- **Framework:** `@google/adk`
-- **Models:** Gemini 2.5 Pro (Orchestrator, Researcher, Writer), Gemini 3 Flash (ImageGen), Gemini 1.5 Pro (Publisher)
-- **Tools:** `GoogleSearchTool`, custom LinkedIn API tool.
-- **Environment:** Integrated directly into the Next.js API routes (Serverless).
-
-## 4. Infrastructure & Integration
-- **Deployment:** Vercel (for Next.js app)
-- **Execution:** Next.js API route (`/api/generate`) triggers the agents.
-- **Scheduling:** Next.js Cron (`/api/cron/run-agents`) to trigger daily agent execution.
+## Payments & Subscriptions
+- **Stripe (Custom Checkout):** Integrated subscription management with a custom checkout UI using Stripe Elements for a seamless user experience.

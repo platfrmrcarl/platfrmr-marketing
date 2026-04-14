@@ -1,23 +1,19 @@
-# Product Guidelines: LinkedIn Auto-Marketer SaaS
+# Product Guidelines
 
-## 1. Visual Aesthetics
-- **Core Theme:** Modern, clean, and "tech-forward."
-- **Color Palette:** Professional high-contrast palette.
-    - Deep Blue
-    - Slate Gray
-    - Vibrant Cyan
-- **Typography:** Modern, clean sans-serif fonts.
+## Prose Style
+- **Tone & Voice:** Professional & Authoritative. The platform should sound trustworthy, helpful, and expert in the field of LinkedIn marketing and AI automation.
+- **Tone Details:** Use clear, concise language. Avoid jargon where possible, but maintain a level of technical accuracy that builds user confidence.
 
-## 2. Interaction Design
-- **Interactive Feedback:** Smooth transitions for all UI elements.
-- **Loading States:** Clear loading indicators for background operations (e.g., ADK agent execution, payment processing).
-- **Confirmation:** Visual feedback for all successful actions (e.g., publishing, profile updates, payments).
+## Design Principles
+- **Clean & Minimalist:** Prioritize whitespace, clear typography, and a layout that focuses the user's attention on their content and goals.
+- **Corporate & Professional:** Maintain an aesthetic that resonates with business users and agencies.
+- **Modern & Vibrant:** Use bold accent colors and subtle animations to create an engaging and lively experience.
 
-## 3. UI Components
-- **Responsive Layout:** Must work seamlessly across mobile, tablet, and desktop.
-- **Sidebar Navigation:** Clear navigation for Dashboard, Onboarding, and Checkout.
-- **Onboarding Form:** Step-by-step guidance with validation feedback.
-- **Dashboard:** Clean, card-based overview for easy information consumption.
+## UX Principles
+- **Efficiency First:** Optimize all workflows for quick task completion, particularly for content generation and posting.
+- **Clarity & Safety:** Ensure that all actions are clear, and prevent user errors through intuitive design and confirmation loops for critical tasks.
+- **Discoverability:** Ensure that all features and settings are easily found without overwhelming the user.
 
-## 4. Visual Assets
-- **Placeholders:** Use stylized CSS shapes and gradients for profile images and background elements to maintain a modern aesthetic without requiring external image assets.
+## Feedback & Communication
+- **User-Friendly Language:** Provide feedback and error messages in clear, non-technical language that helps the user understand what happened and how to proceed.
+- **Action Confirmation:** Always provide immediate visual confirmation for actions like post scheduling or setting updates.

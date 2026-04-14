@@ -1,6 +1,0 @@
-{
-  "id": "02-authentication",
-  "name": "Authentication Flow",
-  "status": "completed",
-  "description": "Google & LinkedIn OAuth with NextAuth.js."
-}

@@ -1,6 +1,0 @@
-{
-  "id": "04-stripe",
-  "name": "Payments Integration",
-  "status": "completed",
-  "description": "Stripe Checkout and subscription management."
-}
